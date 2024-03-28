@@ -1,5 +1,9 @@
 package example;
 
+import org.example.pages.CheckoutPage;
+import org.example.pages.HomePage;
+import org.example.pages.ProductPage;
+import org.example.pages.SearchResultsPage;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -16,8 +20,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EbayPurchaseTest {
-    WebDriver driver;
-    WebElement firstSearchResult;
+    private WebDriver driver;
+    private HomePage homePage;
+    private SearchResultsPage searchResultsPage;
+    private ProductPage productPage;
+    private CheckoutPage checkoutPage;
 
     @BeforeTest
     @Parameters("browser")
@@ -31,23 +38,24 @@ public class EbayPurchaseTest {
         }
 
         driver = new ChromeDriver();
+
+        homePage = new HomePage(driver);
+        searchResultsPage = new SearchResultsPage(driver);
+        productPage = new ProductPage(driver);
+        checkoutPage = new CheckoutPage(driver);
     }
 
     @Test(priority = 0)
     public void navigateToEbay() {
-        driver.get("https://www.ebay.com/");
-
+        homePage.openHomePage("https://www.ebay.com/");
         String currentURL = driver.getCurrentUrl();
         Assert.assertEquals(currentURL, "https://www.ebay.com/", "Failed to navigate to eBay.");
     }
 
     @Test(priority = 1)
     public void selectCellPhonesCategory() {
-        WebElement categoryDropdown = driver.findElement(By.id("gh-shop-a"));
-        categoryDropdown.click();
-
-        WebElement cellPhonesCategory = driver.findElement(By.linkText("Cell phones & accessories"));
-        cellPhonesCategory.click();
+        homePage.getCategoryDropdown().click();
+        homePage.getCellPhoneCategory().click();
 
         String url = driver.getCurrentUrl();
         Assert.assertEquals(url, "https://www.ebay.com/b/Cell-Phones-Smart-Watches-Accessories/15032/bn_1865441", "Incorrect category selected.");
@@ -55,15 +63,12 @@ public class EbayPurchaseTest {
 
     @Test(priority = 2)
     public void performSearch() {
-        WebElement searchInput = driver.findElement(By.id("gh-ac"));
-        searchInput.click();
+        homePage.getSearchInput().click();
         String searchKey = "mobile phone";
-        searchInput.sendKeys(searchKey);
+        homePage.getSearchInput().sendKeys(searchKey);
+        homePage.getSearchButton().click();
 
-        WebElement searchBtn = driver.findElement(By.id("gh-btn"));
-        searchBtn.click();
-
-        List<WebElement> searchResults = driver.findElements(By.className("s-item"));
+        List<WebElement> searchResults = searchResultsPage.getSearchResults();
 
         for (int i = 1; i < Math.min(6, searchResults.size()); i++) {
             WebElement searchResult = searchResults.get(i);
@@ -74,9 +79,9 @@ public class EbayPurchaseTest {
 //            Assert.assertTrue(title.contains(searchKey),"Search result does not contain 'Mobile Phone' keyword.");
         }
 
-        firstSearchResult = searchResults.get(1);
+        WebElement firstSearchResult = searchResults.get(1);
 
-        WebElement itemLink = firstSearchResult.findElement(By.className("s-item__link"));
+        WebElement itemLink = searchResultsPage.getItemLink(firstSearchResult);
         itemLink.click();
 
         String searchResultTitle = firstSearchResult.findElement(By.className("s-item__title")).getText();
@@ -88,37 +93,29 @@ public class EbayPurchaseTest {
 
         Assert.assertEquals(selectedItemTitle, searchResultTitle, "The title and the price of the selected item does not match with the one that loads");
 
-        Select colorSelect = new Select(driver.findElement(By.id("x-msku__select-box-1000")));
+        Select colorSelect = new Select(productPage.getColorSelect());
         colorSelect.selectByIndex(1);
 
-        Select plugSelect = new Select(driver.findElement(By.id("x-msku__select-box-1001")));
+        Select plugSelect = new Select(productPage.getPlugSelect());
         plugSelect.selectByIndex(1);
 
-        WebElement quantity = driver.findElement(By.id("qtyTextBox"));
+        WebElement quantity = productPage.getQuantity();
         quantity.click();
         quantity.clear();
         quantity.sendKeys(String.valueOf(1));
 
-        WebElement addToCartBtn = driver.findElement(By.linkText("Add to cart"));
-        addToCartBtn.click();
+        productPage.getAddToCartButton().click();
 
         String cartItemTitle = driver.findElement(By.className("item-title")).getText();
         System.out.println(cartItemTitle);
-//        System.out.println(firstSearchResult.findElement(By.className("s-item__title")).getText());
-
-
-
     }
 
     @Test(priority = 2)
     void checkout() {
-        WebElement checkoutBtn = driver.findElement(By.name("Go to checkout"));
-        checkoutBtn.click();
+        checkoutPage.getCheckoutButton().click();
+        checkoutPage.getContinueButton().click();
 
-        WebElement continueBtn = driver.findElement(By.id("gxo-btn"));
-        continueBtn.click();
-
-        Assert.assertEquals(driver.findElement(By.className("page-title ")).getText(), "Checkout");
+        Assert.assertEquals(checkoutPage.getPageTitle(), "Checkout");
     }
 
     @AfterTest
